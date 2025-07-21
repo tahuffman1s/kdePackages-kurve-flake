@@ -269,44 +269,48 @@
         devShells.default = devShell;
 
         # Export the Home Manager module
-        homeManagerModules.kurve = homeManagerModule;
-        homeManagerModules.default = homeManagerModule;
+        homeManagerModules = {
+          kurve = homeManagerModule;
+          default = homeManagerModule;
+        };
         
         # NixOS module
-        nixosModules.kurve = { config, lib, pkgs, ... }:
-          with lib;
-          let
-            cfg = config.services.kurve;
-          in {
-            options.services.kurve = {
-              enable = mkEnableOption "Kurve audio visualizer support";
+        nixosModules = {
+          kurve = { config, lib, pkgs, ... }:
+            with lib;
+            let
+              cfg = config.services.kurve;
+            in {
+              options.services.kurve = {
+                enable = mkEnableOption "Kurve audio visualizer support";
+                
+                package = mkOption {
+                  type = types.package;
+                  default = kurve;
+                  description = "The Kurve package to use";
+                };
+              };
               
-              package = mkOption {
-                type = types.package;
-                default = kurve;
-                description = "The Kurve package to use";
+              config = mkIf cfg.enable {
+                environment.systemPackages = with pkgs; [
+                  cfg.package
+                  cava
+                  kdePackages.qtwebsockets
+                  python3Packages.websockets
+                  kdePackages.kpackagetool
+                ];
+                
+                # Ensure required services are available
+                services.pulseaudio.enable = mkDefault true;
+                services.pipewire = mkIf (!config.services.pulseaudio.enable) {
+                  enable = mkDefault true;
+                  pulse.enable = mkDefault true;
+                };
               };
             };
-            
-            config = mkIf cfg.enable {
-              environment.systemPackages = with pkgs; [
-                cfg.package
-                cava
-                kdePackages.qtwebsockets
-                python3Packages.websockets
-                kdePackages.kpackagetool
-              ];
-              
-              # Ensure required services are available
-              services.pulseaudio.enable = mkDefault true;
-              services.pipewire = mkIf (!config.services.pulseaudio.enable) {
-                enable = mkDefault true;
-                pulse.enable = mkDefault true;
-              };
-            };
-          };
 
-        nixosModules.default = self.nixosModules.${system}.kurve;
+          default = self.nixosModules.${system}.kurve;
+        };
       }
     );
 }
