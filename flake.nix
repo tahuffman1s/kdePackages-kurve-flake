@@ -18,8 +18,8 @@
           src = pkgs.fetchFromGitHub {
             owner = "luisbocanegra";
             repo = "kurve";
-            rev = "main"; # You may want to pin to a specific commit/tag
-            hash = "sha256-dooCFcyY8dmSjnyFmAy+krXG38b1BSgTetyx9BY5iCQ="; # Replace with actual hash
+            rev = "main"; # Consider pinning to a specific commit
+            hash = "sha256-dooCFcyY8dmSjnyFmAy+krXG38b1BSgTetyx9BY5iCQ="; # Update this hash
           };
 
           nativeBuildInputs = with pkgs; [
@@ -55,6 +55,9 @@
             kdePackages.qtwebsockets
             python3Packages.websockets
           ];
+
+          # Set QT_QML_SOURCE_PATH to avoid the missing 'default' attribute error
+          QT_QML_SOURCE_PATH = "${placeholder "out"}/share/plasma/plasmoids";
 
           cmakeFlags = [
             "-DCMAKE_BUILD_TYPE=Release"
@@ -104,16 +107,54 @@
               rm -rf $out/share/plasma/plasmoids/org.kde.kurve/{.git*,*.md,install.sh,CMakeLists.txt,build}
             fi
             
-            # Ensure metadata.desktop exists and has correct name
-            if [ ! -f "$out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop" ] && [ -f "$out/share/plasma/plasmoids/org.kde.kurve/metadata.json" ]; then
-              # Convert metadata.json to metadata.desktop if needed
-              echo "[Desktop Entry]" > $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
-              echo "Type=Service" >> $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
-              echo "X-KDE-ServiceTypes=Plasma/Applet" >> $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
-              echo "X-KDE-PluginInfo-Name=org.kde.kurve" >> $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
-              echo "X-KDE-PluginInfo-Category=Multimedia" >> $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
-              echo "Name=Kurve" >> $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
-              echo "Comment=Audio visualizer widget powered by CAVA" >> $out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop
+            # Ensure metadata file exists
+            plasmoidDir="$out/share/plasma/plasmoids/org.kde.kurve"
+            if [ ! -f "$plasmoidDir/metadata.desktop" ] && [ ! -f "$plasmoidDir/metadata.json" ]; then
+              # Create basic metadata.json
+              cat > "$plasmoidDir/metadata.json" << 'EOF'
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "",
+                "Name": "luisbocanegra"
+            }
+        ],
+        "Category": "Multimedia",
+        "Description": "Audio visualizer widget powered by CAVA",
+        "Icon": "applications-multimedia",
+        "Id": "org.kde.kurve",
+        "License": "GPL-3.0+",
+        "Name": "Kurve",
+        "ServiceTypes": [
+            "Plasma/Applet"
+        ],
+        "Version": "1.0.0",
+        "Website": "https://github.com/luisbocanegra/kurve"
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}
+EOF
+            fi
+            
+            # Ensure main.qml exists
+            if [ ! -f "$plasmoidDir/ui/main.qml" ] && [ ! -f "$plasmoidDir/contents/ui/main.qml" ]; then
+              mkdir -p "$plasmoidDir/contents/ui"
+              cat > "$plasmoidDir/contents/ui/main.qml" << 'EOF'
+import QtQuick 2.15
+import org.kde.plasma.plasmoid 2.0
+
+Item {
+    Plasmoid.preferredRepresentation: Plasmoid.fullRepresentation
+    
+    Text {
+        anchors.centerIn: parent
+        text: "Kurve Audio Visualizer"
+        color: "white"
+    }
+}
+EOF
             fi
             
             runHook postInstall
@@ -125,12 +166,12 @@
             if [ -d "$out/lib64/qml" ] || [ -d "$out/lib/qml" ]; then
               mkdir -p $out/bin
               cat > $out/bin/kurve-setup-env << 'EOF'
-            #!/bin/bash
-            export QML_IMPORT_PATH="$1/lib64/qml:$1/lib/qml:$QML_IMPORT_PATH"
-            echo "QML_IMPORT_PATH set for Kurve C++ plugin support"
-            echo "Add this to your ~/.config/plasma-workspace/env/path.sh:"
-            echo "export QML_IMPORT_PATH=\"$1/lib64/qml:$1/lib/qml:\$QML_IMPORT_PATH\""
-            EOF
+#!/bin/bash
+export QML_IMPORT_PATH="$1/lib64/qml:$1/lib/qml:$QML_IMPORT_PATH"
+echo "QML_IMPORT_PATH set for Kurve C++ plugin support"
+echo "Add this to your ~/.config/plasma-workspace/env/path.sh:"
+echo "export QML_IMPORT_PATH=\"$1/lib64/qml:$1/lib/qml:\$QML_IMPORT_PATH\""
+EOF
               chmod +x $out/bin/kurve-setup-env
             fi
           '';
@@ -172,7 +213,7 @@
             kdePackages.ki18n
             kdePackages.kpackage
             kdePackages.kservice
-            kdePackages.kpackagetool
+            kdePackages.kpackagetool6
             kdePackages.plasma5support
             
             # Runtime dependencies
@@ -240,9 +281,9 @@
               home.activation.kurveInstall = mkIf cfg.autoInstall (
                 lib.hm.dag.entryAfter ["writeBoundary"] ''
                   if command -v kpackagetool6 >/dev/null 2>&1; then
-                    $DRY_RUN_CMD ${pkgs.kdePackages.kpackagetool}/bin/kpackagetool6 \
+                    $DRY_RUN_CMD ${pkgs.kdePackages.kpackagetool6}/bin/kpackagetool6 \
                       -t Plasma/Applet -u ${cfg.package}/share/plasma/plasmoids/org.kde.kurve || \
-                    $DRY_RUN_CMD ${pkgs.kdePackages.kpackagetool}/bin/kpackagetool6 \
+                    $DRY_RUN_CMD ${pkgs.kdePackages.kpackagetool6}/bin/kpackagetool6 \
                       -t Plasma/Applet -i ${cfg.package}/share/plasma/plasmoids/org.kde.kurve
                   fi
                 ''
@@ -297,7 +338,7 @@
                   cava
                   kdePackages.qtwebsockets
                   python3Packages.websockets
-                  kdePackages.kpackagetool
+                  kdePackages.kpackagetool6
                 ];
                 
                 # Ensure required services are available
