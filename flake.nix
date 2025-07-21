@@ -87,31 +87,8 @@ EOF
           };
         };
 
-      in {
-        packages = {
-          default = kurve;
-          kurve = kurve;
-        };
-
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            cava
-            python3Packages.websockets
-            kdePackages.qtwebsockets
-            kdePackages.libplasma
-          ];
-          
-          shellHook = ''
-            echo "Kurve development environment"
-            echo "Runtime dependencies are available:"
-            echo "- cava: $(which cava)"
-            echo "- python websockets: available"
-            echo "- Qt6 websockets: available"
-          '';
-        };
-
-        # Simplified Home Manager module
-        homeManagerModules.default = { config, lib, pkgs, ... }:
+        # Define the Home Manager module
+        kurveModule = { config, lib, pkgs, ... }:
           with lib;
           let
             cfg = config.programs.kurve;
@@ -140,6 +117,35 @@ EOF
               };
             };
           };
+
+      in {
+        packages = {
+          default = kurve;
+          kurve = kurve;
+        };
+
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            cava
+            python3Packages.websockets
+            kdePackages.qtwebsockets
+            kdePackages.libplasma
+          ];
+          
+          shellHook = ''
+            echo "Kurve development environment"
+            echo "Runtime dependencies are available:"
+            echo "- cava: $(which cava)"
+            echo "- python websockets: available"
+            echo "- Qt6 websockets: available"
+          '';
+        };
+
+        # Home Manager modules with proper default
+        homeManagerModules = {
+          kurve = kurveModule;
+          default = kurveModule;
+        };
       }
     );
 }
