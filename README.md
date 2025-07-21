@@ -17,8 +17,8 @@ A NixOS flake for [Kurve](https://github.com/luisbocanegra/kurve), an audio visu
 
 ```bash
 # Clone this flake
-git clone https://github.com/tahuffman1s/kurve-flake.git
-cd kurve-flake
+git clone https://github.com/tahuffman1s/kdePackages-kurve-flake.git
+cd kdePackages-kurve-flake
 
 # Build the package
 nix build
@@ -50,13 +50,13 @@ kpackagetool6 -t Plasma/Applet -u ./result/share/plasma/plasmoids/org.kde.kurve
 
 ```bash
 # Build
-nix build github:tahuffman1s/kurve-flake
+nix build github:tahuffman1s/kdePackages-kurve-flake
 
 # Development environment
-nix develop github:tahuffman1s/kurve-flake
+nix develop github:tahuffman1s/kdePackages-kurve-flake
 
 # Run in a temporary shell
-nix shell github:tahuffman1s/kurve-flake
+nix shell github:tahuffman1s/kdePackages-kurve-flake
 ```
 
 ### Option 2: Home Manager Integration
@@ -67,7 +67,7 @@ Add to your `home.nix` or `flake.nix`:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    kurve-flake.url = "github:tahuffman1s/kurve-flake";
+    kurve-flake.url = "github:tahuffman1s/kdePackages-kurve-flake";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -100,7 +100,7 @@ Add to your `configuration.nix`:
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    kurve-flake.url = "github:tahuffman1s/kurve-flake";
+    kurve-flake.url = "github:tahuffman1s/kdePackages-kurve-flake";
   };
 
   outputs = { nixpkgs, kurve-flake, ... }: {
@@ -140,7 +140,7 @@ git clone https://github.com/luisbocanegra/kurve.git
 cd kurve
 
 # Enter development shell
-nix develop github:tahuffman1s/kurve-flake
+nix develop github:tahuffman1s/kdePackages-kurve-flake
 
 # Build manually
 mkdir build && cd build
