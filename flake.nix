@@ -19,26 +19,27 @@
             owner = "luisbocanegra";
             repo = "kurve";
             rev = "main"; # You may want to pin to a specific commit/tag
-            sha256 = ""; # You'll need to fill this in with the actual hash
+            hash = "sha256-dooCFcyY8dmSjnyFmAy+krXG38b1BSgTetyx9BY5iCQ="; # Replace with actual hash
           };
 
           nativeBuildInputs = with pkgs; [
             cmake
             extra-cmake-modules
             pkg-config
-            wrapQtAppsHook
+            kdePackages.wrapQtAppsHook
           ];
 
           buildInputs = with pkgs; [
             # KDE/Qt6 dependencies
             kdePackages.qtbase
             kdePackages.qtwebsockets
-            kdePackages.plasma-framework
+            kdePackages.libplasma
             kdePackages.kconfig
             kdePackages.kcoreaddons
             kdePackages.ki18n
             kdePackages.kpackage
             kdePackages.kservice
+            kdePackages.plasma5support
             
             # Runtime dependencies
             cava
@@ -165,13 +166,14 @@
             # KDE/Qt6 development
             kdePackages.qtbase
             kdePackages.qtwebsockets
-            kdePackages.plasma-framework
+            kdePackages.libplasma
             kdePackages.kconfig
             kdePackages.kcoreaddons
             kdePackages.ki18n
             kdePackages.kpackage
             kdePackages.kservice
             kdePackages.kpackagetool
+            kdePackages.plasma5support
             
             # Runtime dependencies
             cava
