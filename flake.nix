@@ -15,56 +15,66 @@
           pname = "kurve";
           version = "1.0.0";
 
-          src = pkgs.fetchFromGitHub {
-            owner = "luisbocanegra";
-            repo = "kurve";
-            rev = "main";
-            sha256 = "sha256-dooCFcyY8dmSjnyFmAy+krXG38b1BSgTetyx9BY5iCQ=";
+          # Use fetchurl with the latest archive
+          src = pkgs.fetchurl {
+            url = "https://github.com/luisbocanegra/kurve/archive/refs/heads/main.tar.gz";
+            sha256 = "sha256-OTUEYluS35wPCQMqqEd+sdqBMhj/qrrM9Zwir0UKdns=";
           };
 
-          nativeBuildInputs = with pkgs; [
-            cmake
-            extra-cmake-modules
-            kdePackages.wrapQtAppsHook
-          ];
-
-          buildInputs = with pkgs; [
-            kdePackages.qtbase
-            kdePackages.qtwebsockets
-            kdePackages.libplasma
-            kdePackages.kconfig
-            kdePackages.kcoreaddons
-            kdePackages.ki18n
-            kdePackages.kpackage
-            kdePackages.kservice
-            cava
-            python3Packages.websockets
-          ];
-
+          # Don't build anything, just package the files
           dontConfigure = true;
           dontBuild = true;
+          dontFixup = true;
+          dontWrapQtApps = true;
+
+          # Runtime dependencies that should be available
+          propagatedBuildInputs = with pkgs; [
+            cava
+            python3Packages.websockets
+            kdePackages.qtwebsockets
+          ];
 
           installPhase = ''
             runHook preInstall
             
+            # Create the plasmoid directory
             mkdir -p $out/share/plasma/plasmoids/org.kde.kurve
             
-            # Copy the package directory
+            # Copy the package directory contents
             if [ -d "package" ]; then
               cp -r package/* $out/share/plasma/plasmoids/org.kde.kurve/
             else
+              # Fallback: copy everything and clean up
               cp -r . $out/share/plasma/plasmoids/org.kde.kurve/
-              rm -rf $out/share/plasma/plasmoids/org.kde.kurve/{.git*,*.md,*.sh,CMakeLists.txt,build}
+              # Remove unwanted files
+              find $out/share/plasma/plasmoids/org.kde.kurve -name ".git*" -exec rm -rf {} + 2>/dev/null || true
+              find $out/share/plasma/plasmoids/org.kde.kurve -name "*.md" -delete 2>/dev/null || true
+              find $out/share/plasma/plasmoids/org.kde.kurve -name "*.sh" -delete 2>/dev/null || true
+              find $out/share/plasma/plasmoids/org.kde.kurve -name "CMakeLists.txt" -delete 2>/dev/null || true
+              rm -rf $out/share/plasma/plasmoids/org.kde.kurve/build 2>/dev/null || true
             fi
             
-            # Create install helper script
-            mkdir -p $out/bin
-            cat > $out/bin/kurve-install << 'EOF'
-#!/bin/bash
-echo "To install Kurve widget:"
-echo "kpackagetool6 -t Plasma/Applet -i $out/share/plasma/plasmoids/org.kde.kurve"
+            # Ensure we have a metadata file
+            if [ ! -f "$out/share/plasma/plasmoids/org.kde.kurve/metadata.json" ] && [ ! -f "$out/share/plasma/plasmoids/org.kde.kurve/metadata.desktop" ]; then
+              cat > $out/share/plasma/plasmoids/org.kde.kurve/metadata.json << 'EOF'
+{
+    "KPlugin": {
+        "Authors": [{"Email": "", "Name": "luisbocanegra"}],
+        "Category": "Multimedia",
+        "Description": "Audio visualizer widget powered by CAVA",
+        "Icon": "applications-multimedia",
+        "Id": "org.kde.kurve",
+        "License": "GPL-3.0+",
+        "Name": "Kurve",
+        "ServiceTypes": ["Plasma/Applet"],
+        "Version": "1.0.0",
+        "Website": "https://github.com/luisbocanegra/kurve"
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-MainScript": "ui/main.qml"
+}
 EOF
-            chmod +x $out/bin/kurve-install
+            fi
             
             runHook postInstall
           '';
@@ -85,17 +95,22 @@ EOF
 
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            cmake
-            extra-cmake-modules
-            kdePackages.qtbase
-            kdePackages.qtwebsockets
-            kdePackages.libplasma
             cava
             python3Packages.websockets
+            kdePackages.qtwebsockets
+            kdePackages.libplasma
           ];
+          
+          shellHook = ''
+            echo "Kurve development environment"
+            echo "Runtime dependencies are available:"
+            echo "- cava: $(which cava)"
+            echo "- python websockets: available"
+            echo "- Qt6 websockets: available"
+          '';
         };
 
-        # Simple Home Manager module
+        # Simplified Home Manager module
         homeManagerModules.default = { config, lib, pkgs, ... }:
           with lib;
           let
@@ -103,6 +118,7 @@ EOF
           in {
             options.programs.kurve = {
               enable = mkEnableOption "Kurve audio visualizer widget";
+              
               package = mkOption {
                 type = types.package;
                 default = kurve;
@@ -114,7 +130,14 @@ EOF
               home.packages = [ 
                 cfg.package 
                 pkgs.cava
+                pkgs.python3Packages.websockets
+                pkgs.kdePackages.qtwebsockets
               ];
+              
+              # Set up environment for QML plugin support
+              home.sessionVariables = {
+                QML_IMPORT_PATH = "$HOME/.local/lib64/qml:$HOME/.local/lib/qml:$QML_IMPORT_PATH";
+              };
             };
           };
       }
