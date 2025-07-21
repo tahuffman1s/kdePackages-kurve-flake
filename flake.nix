@@ -19,7 +19,7 @@
             owner = "luisbocanegra";
             repo = "kurve";
             rev = "main"; # Consider pinning to a specific commit
-            hash = "sha256-dooCFcyY8dmSjnyFmAy+krXG38b1BSgTetyx9BY5iCQ="; # Update this hash
+            hash = "sha256-dooCFcyY8dmSjnyFmAy+krXG38b1BSgTetyx9BY5iCQ="; # This will show you the correct hash
           };
 
           nativeBuildInputs = with pkgs; [
@@ -316,7 +316,7 @@ EOF
         };
         
         # NixOS module
-        nixosModules = {
+        nixosModules = rec {
           kurve = { config, lib, pkgs, ... }:
             with lib;
             let
@@ -350,7 +350,7 @@ EOF
               };
             };
 
-          default = self.nixosModules.${system}.kurve;
+          default = kurve;
         };
       }
     );
